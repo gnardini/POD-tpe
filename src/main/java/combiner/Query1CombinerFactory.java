@@ -26,6 +26,11 @@ public class Query1CombinerFactory implements CombinerFactory<String, Integer, I
         }
 
         @Override
+        public void reset() {
+            count = 0;
+        }
+
+        @Override
         public Integer finalizeChunk() {
             return count;
         }
