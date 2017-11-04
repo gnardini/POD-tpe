@@ -1,29 +1,42 @@
+import static java.lang.System.exit;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+
+import mapper.Query1Mapper;
+import mapper.Query2Mapper;
+import mapper.Query3Mapper;
+import mapper.Query51Mapper;
+import mapper.Query52Mapper;
+import model.CensoInfo;
+import model.PoblatedDepartment;
+import model.PopulationPerRegion;
+import model.RegionCount;
+import reducer.Query1ReducerFactory;
+import reducer.Query2ReducerFactory;
+import reducer.Query3ReducerFactory;
+import reducer.Query51ReducerFactory;
+import reducer.Query52ReducerFactory;
+
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientNetworkConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.IList;
+import com.hazelcast.core.IMap;
 import com.hazelcast.mapreduce.Job;
 import com.hazelcast.mapreduce.JobTracker;
 import com.hazelcast.mapreduce.KeyValueSource;
 import combiner.Query1CombinerFactory;
 import combiner.Query2CombinerFactory;
 import combiner.Query3CombinerFactory;
-import mapper.Query1Mapper;
-import mapper.Query2Mapper;
-import mapper.Query3Mapper;
-import model.CensoInfo;
-import model.PoblatedDepartment;
-import model.RegionCount;
-import reducer.Query1ReducerFactory;
-import reducer.Query2ReducerFactory;
-import reducer.Query3ReducerFactory;
-
-import java.util.*;
-import java.util.concurrent.ExecutionException;
-
-import static java.lang.System.exit;
+import combiner.Query51CombinerFactory;
+import combiner.Query52CombinerFactory;
 
 public class DistributedMap {
 
@@ -53,6 +66,8 @@ public class DistributedMap {
         query1(hz, list);
         query2(hz, list, "Santa Fe", 10);
         query3(hz, list);
+        
+        query5(hz, list);
         System.out.println((System.nanoTime() - time) / 1E9);
 
         exit(0);
@@ -124,5 +139,35 @@ public class DistributedMap {
         sortedResult.forEach(r -> System.out.println(r.getKey() + " " + String.format("%.2f", r.getValue())));
     }
 
+    
+    private static void query5(
+            final HazelcastInstance hz,
+            final IList<CensoInfo> censoInfos) throws ExecutionException, InterruptedException {
+        System.out.println("Query 5");
+        JobTracker jobTracker = hz.getJobTracker("query5");
+
+        final KeyValueSource<String, CensoInfo> source1 = KeyValueSource.fromList(censoInfos);
+        Job<String, CensoInfo> job1 = jobTracker.newJob(source1);
+        ICompletableFuture<Map<Integer, PopulationPerRegion>> future1 = job1
+                .mapper(new Query51Mapper())
+                .combiner(new Query51CombinerFactory())
+                .reducer(new Query51ReducerFactory())
+                .submit();
+//        future.andThen( buildCallback() );
+        final IMap<Integer, PopulationPerRegion> map = hz.getMap("query51map");
+        future1.get().forEach(map::put);
+        final KeyValueSource<Integer, PopulationPerRegion> source2 = KeyValueSource.fromMap(map);
+        Job<Integer, PopulationPerRegion> job2 = jobTracker.newJob(source2);
+        ICompletableFuture<Map<String, Double>> future2 = job2
+                .mapper(new Query52Mapper())
+                .combiner(new Query52CombinerFactory())
+                .reducer(new Query52ReducerFactory())
+                .submit();
+        
+        Map<String, Double> result = future2.get();
+        List<Map.Entry<String, Double>> sortedResult = new ArrayList<>(result.entrySet());
+        Collections.sort(sortedResult, Comparator.comparingDouble(x -> -x.getValue()));
+        sortedResult.forEach(r -> System.out.println(r.getKey() + " " + String.format("%.2f", r.getValue())));
+    }
 
 }

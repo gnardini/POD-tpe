@@ -1,11 +1,11 @@
-import model.CensoInfo;
-import model.Condition;
-
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+
+import model.CensoInfo;
+import model.Condition;
 
 public class CsvReader {
 
