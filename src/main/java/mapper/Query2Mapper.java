@@ -5,9 +5,6 @@ import com.hazelcast.mapreduce.Mapper;
 import model.CensoInfo;
 import model.PoblatedDepartment;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class Query2Mapper implements Mapper<String, CensoInfo, String, PoblatedDepartment> {
 
     @Override
