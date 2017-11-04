@@ -1,6 +1,7 @@
 import collator.Query2Collator;
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.client.config.ClientNetworkConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.IList;
@@ -26,7 +27,7 @@ import java.util.concurrent.ExecutionException;
 
 public class DistributedMap {
 
-    private static final String CENSO_INFO_PATH = "/Users/Viki/Documents/workspace/itba/pod/POD-tpe/census100.csv";
+    private static final String CENSO_INFO_PATH = "/Volumes/SAKU-02/POD/pod-tpe/census100.csv";
 
     private static final Comparator<Map.Entry<String, RegionCount>> ENTRYSET_COMPARATOR = new Comparator<Map.Entry<String, RegionCount>>() {
         @Override
@@ -64,6 +65,11 @@ public class DistributedMap {
         entrySet.forEach(r -> System.out.println(r.getKey() + "," + r.getValue().getCount()));*/
 
         final ClientConfig ccfg = new ClientConfig();
+        ccfg.getGroupConfig().setName("grupo3").setPassword("12345");
+        ClientNetworkConfig cnc = new ClientNetworkConfig();
+        cnc.addAddress("192.168.0.13");
+        ccfg.setNetworkConfig(cnc);
+
         final HazelcastInstance hz = HazelcastClient.newHazelcastClient(ccfg);
 
         JobTracker jobTracker = hz.getJobTracker("query2");
