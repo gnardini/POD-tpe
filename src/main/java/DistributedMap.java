@@ -10,18 +10,22 @@ import com.hazelcast.mapreduce.KeyValueSource;
 import combiner.Query1CombinerFactory;
 import combiner.Query2CombinerFactory;
 import combiner.Query3CombinerFactory;
+import combiner.Query6CombinerFactory;
 import mapper.Query1Mapper;
 import mapper.Query2Mapper;
 import mapper.Query3Mapper;
+import mapper.Query6Mapper;
 import model.CensoInfo;
 import model.PoblatedDepartment;
 import model.RegionCount;
 import reducer.Query1ReducerFactory;
 import reducer.Query2ReducerFactory;
 import reducer.Query3ReducerFactory;
+import reducer.Query6ReducerFactory;
 
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import static java.lang.System.exit;
 
@@ -36,7 +40,7 @@ public class DistributedMap {
         final ClientConfig ccfg = new ClientConfig();
         ccfg.getGroupConfig().setName("grupo3").setPassword("12345");
         ClientNetworkConfig cnc = new ClientNetworkConfig();
-        //cnc.addAddress("192.168.0.13");
+        cnc.addAddress("192.168.0.13");
         cnc.addAddress("192.168.0.23");
         ccfg.setNetworkConfig(cnc);
 
@@ -53,6 +57,7 @@ public class DistributedMap {
         query1(hz, list);
         query2(hz, list, "Santa Fe", 10);
         query3(hz, list);
+        query6(hz, list, 5);
         System.out.println((System.nanoTime() - time) / 1E9);
 
         exit(0);
@@ -116,7 +121,6 @@ public class DistributedMap {
                 .combiner(new Query3CombinerFactory())
                 .reducer(new Query3ReducerFactory())
                 .submit();
-//        future.andThen( buildCallback() );
 
         Map<String, Double> result = future.get();
         List<Map.Entry<String, Double>> sortedResult = new ArrayList<>(result.entrySet());
@@ -124,5 +128,26 @@ public class DistributedMap {
         sortedResult.forEach(r -> System.out.println(r.getKey() + " " + String.format("%.2f", r.getValue())));
     }
 
+    private static void query6(
+            final HazelcastInstance hz,
+            final IList<CensoInfo> censoInfos,
+            final int n) throws ExecutionException, InterruptedException {
+        System.out.println("Query 6");
+        JobTracker jobTracker = hz.getJobTracker("query6");
+
+        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
+        Job<String, CensoInfo> job = jobTracker.newJob(source);
+        ICompletableFuture<Map<String, Integer>> future = job
+                .mapper(new Query6Mapper())
+                .combiner(new Query6CombinerFactory())
+                .reducer(new Query6ReducerFactory())
+                .submit();
+
+        Map<String, Integer> result = future.get();
+        List<Map.Entry<String, Integer>> sortedResult = new ArrayList<>(result.entrySet());
+        sortedResult = sortedResult.stream().filter(entry -> entry.getValue() >= n).collect(Collectors.toList());
+        Collections.sort(sortedResult, Comparator.comparingInt(x -> -x.getValue()));
+        sortedResult.forEach(r -> System.out.println(r.getKey() + " " + r.getValue()));
+    }
 
 }
