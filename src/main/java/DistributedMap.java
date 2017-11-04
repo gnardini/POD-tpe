@@ -1,17 +1,20 @@
-import static java.lang.System.exit;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import mapper.Query1Mapper;
 import mapper.Query2Mapper;
 import mapper.Query3Mapper;
 import mapper.Query51Mapper;
 import mapper.Query52Mapper;
+import mapper.Query6Mapper;
+import mapper.Query7aMapper;
+import mapper.Query7bMapper;
 import model.CensoInfo;
 import model.PoblatedDepartment;
 import model.PopulationPerRegion;
@@ -21,6 +24,9 @@ import reducer.Query2ReducerFactory;
 import reducer.Query3ReducerFactory;
 import reducer.Query51ReducerFactory;
 import reducer.Query52ReducerFactory;
+import reducer.Query6ReducerFactory;
+import reducer.Query7aReducerFactory;
+import reducer.Query7bReducerFactory;
 
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
@@ -37,6 +43,9 @@ import combiner.Query2CombinerFactory;
 import combiner.Query3CombinerFactory;
 import combiner.Query51CombinerFactory;
 import combiner.Query52CombinerFactory;
+import combiner.Query6CombinerFactory;
+import combiner.Query7aCombinerFactory;
+import combiner.Query7bCombinerFactory;
 
 public class DistributedMap {
 
@@ -49,8 +58,8 @@ public class DistributedMap {
         final ClientConfig ccfg = new ClientConfig();
         ccfg.getGroupConfig().setName("grupo3").setPassword("12345");
         ClientNetworkConfig cnc = new ClientNetworkConfig();
-        //cnc.addAddress("192.168.0.13");
-        cnc.addAddress("192.168.0.23");
+        cnc.addAddress("192.168.0.13");
+//        cnc.addAddress("192.168.0.23");
         ccfg.setNetworkConfig(cnc);
 
         final HazelcastInstance hz = HazelcastClient.newHazelcastClient(ccfg);
@@ -65,12 +74,13 @@ public class DistributedMap {
         long time = System.nanoTime();
         query1(hz, list);
         query2(hz, list, "Santa Fe", 10);
-        query3(hz, list);
-        
+        query3(hz, list); 
         query5(hz, list);
+        query6(hz, list, 5);
+        query7(hz, list, 4);
         System.out.println((System.nanoTime() - time) / 1E9);
 
-        exit(0);
+        System.exit(0);
     }
 
     private static void query1(
@@ -131,7 +141,6 @@ public class DistributedMap {
                 .combiner(new Query3CombinerFactory())
                 .reducer(new Query3ReducerFactory())
                 .submit();
-//        future.andThen( buildCallback() );
 
         Map<String, Double> result = future.get();
         List<Map.Entry<String, Double>> sortedResult = new ArrayList<>(result.entrySet());
@@ -139,7 +148,7 @@ public class DistributedMap {
         sortedResult.forEach(r -> System.out.println(r.getKey() + " " + String.format("%.2f", r.getValue())));
     }
 
-    
+
     private static void query5(
             final HazelcastInstance hz,
             final IList<CensoInfo> censoInfos) throws ExecutionException, InterruptedException {
@@ -167,7 +176,65 @@ public class DistributedMap {
         Map<String, Double> result = future2.get();
         List<Map.Entry<String, Double>> sortedResult = new ArrayList<>(result.entrySet());
         Collections.sort(sortedResult, Comparator.comparingDouble(x -> -x.getValue()));
-        sortedResult.forEach(r -> System.out.println(r.getKey() + " " + String.format("%.2f", r.getValue())));
+        sortedResult.forEach(r -> System.out.println(r.getKey() + " " + String.format("%.2f", r.getValue())));   
+    }
+    
+    private static void query6(
+            final HazelcastInstance hz,
+            final IList<CensoInfo> censoInfos,
+            final int n) throws ExecutionException, InterruptedException {
+        System.out.println("Query 6");
+        JobTracker jobTracker = hz.getJobTracker("query6");
+
+        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
+        Job<String, CensoInfo> job = jobTracker.newJob(source);
+        ICompletableFuture<Map<String, Integer>> future = job
+                .mapper(new Query6Mapper())
+                .combiner(new Query6CombinerFactory())
+                .reducer(new Query6ReducerFactory())
+                .submit();
+
+        Map<String, Integer> result = future.get();
+        List<Map.Entry<String, Integer>> sortedResult = new ArrayList<>(result.entrySet());
+        sortedResult = sortedResult.stream().filter(entry -> entry.getValue() >= n).collect(Collectors.toList());
+        Collections.sort(sortedResult, Comparator.comparingInt(x -> -x.getValue()));
+        sortedResult.forEach(r -> System.out.println(r.getKey() + " " + r.getValue()));
+    }
+
+    private static void query7(
+            final HazelcastInstance hz,
+            final IList<CensoInfo> censoInfos,
+            final int n) throws ExecutionException, InterruptedException {
+        System.out.println("Query 7");
+        JobTracker jobTracker = hz.getJobTracker("query7");
+
+        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
+        Job<String, CensoInfo> jobA = jobTracker.newJob(source);
+        ICompletableFuture<Map<String, Set<String>>> future = jobA
+                .mapper(new Query7aMapper())
+                .combiner(new Query7aCombinerFactory())
+                .reducer(new Query7aReducerFactory())
+                .submit();
+
+
+
+        Map<String, Set<String>> result = future.get();
+        final IMap<String, Set<String>> partbMap = hz.getMap( "query7b" );
+        result.entrySet().forEach(entry -> partbMap.put(entry.getKey(), entry.getValue()));
+
+        final KeyValueSource<String, Set<String>> partbSource = KeyValueSource.fromMap(partbMap);
+        Job<String, Set<String>> jobB = jobTracker.newJob(partbSource);
+        ICompletableFuture<Map<String, Integer>> partBFuture = jobB
+                .mapper(new Query7bMapper())
+                .combiner(new Query7bCombinerFactory())
+                .reducer(new Query7bReducerFactory())
+                .submit();
+
+        Map<String, Integer> finalResult = partBFuture.get();
+        List<Map.Entry<String, Integer>> sortedResult = new ArrayList<>(finalResult.entrySet());
+        sortedResult = sortedResult.stream().filter(entry -> entry.getValue() >= n).collect(Collectors.toList());
+        Collections.sort(sortedResult, Comparator.comparingInt(x -> -x.getValue()));
+        sortedResult.forEach(r -> System.out.println(r.getKey() + " " + r.getValue()));
     }
 
 }
