@@ -8,7 +8,7 @@ import java.io.IOException;
 
 public class CensoInfo implements DataSerializable {
 
-    private int condition;
+    private Condition condition;
     private int homeId;
     private String department;
     private String province;
@@ -16,7 +16,7 @@ public class CensoInfo implements DataSerializable {
     public CensoInfo() {
     }
 
-    public CensoInfo(int condition, int homeId, String department, String province) {
+    public CensoInfo(Condition condition, int homeId, String department, String province) {
         this.condition = condition;
         this.homeId = homeId;
         this.department = department;
@@ -25,7 +25,7 @@ public class CensoInfo implements DataSerializable {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeInt(condition);
+        out.writeInt(condition.ordinal());
         out.writeInt(homeId);
         out.writeUTF(department);
         out.writeUTF(province);
@@ -33,13 +33,13 @@ public class CensoInfo implements DataSerializable {
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        condition = in.readInt();
+        condition = Condition.fromInt(in.readInt());
         homeId = in.readInt();
         department = in.readUTF();
         province = in.readUTF();
     }
 
-    public int getCondition() {
+    public Condition getCondition() {
         return condition;
     }
 

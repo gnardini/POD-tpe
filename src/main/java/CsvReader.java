@@ -1,4 +1,5 @@
 import model.CensoInfo;
+import model.Condition;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -18,7 +19,7 @@ public class CsvReader {
 
             while ((line = br.readLine()) != null) {
                 String[] items = line.split(cvsSplitBy);
-                CensoInfo censoInfo = new CensoInfo(Integer.parseInt(items[0]), Integer.parseInt(items[1]), items[2], items[3]);
+                CensoInfo censoInfo = new CensoInfo(Condition.fromInt(Integer.parseInt(items[0])), Integer.parseInt(items[1]), items[2], items[3]);
                 censoInfoList.add(censoInfo);
             }
         } catch (IOException e) {

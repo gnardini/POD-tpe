@@ -8,21 +8,26 @@ import com.hazelcast.core.IList;
 import com.hazelcast.mapreduce.Job;
 import com.hazelcast.mapreduce.JobTracker;
 import com.hazelcast.mapreduce.KeyValueSource;
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import combiner.Query1CombinerFactory;
+import combiner.Query3CombinerFactory;
 import mapper.Query1Mapper;
 import mapper.Query2Mapper;
+import mapper.Query3Mapper;
 import model.CensoInfo;
+import model.EmploymentData;
 import model.PoblatedDepartment;
 import model.RegionCount;
 import reducer.Query1ReducerFactory;
 import reducer.Query2ReducerFactory;
+import reducer.Query3ReducerFactory;
 
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 public class DistributedMap {
 
-    private static final String CENSO_INFO_PATH = "census100.csv";
+    private static final String CENSO_INFO_PATH = "census1000000.csv";
 
     private static final Comparator<Map.Entry<String, RegionCount>> ENTRYSET_COMPARATOR = new Comparator<Map.Entry<String, RegionCount>>() {
         @Override
@@ -40,7 +45,7 @@ public class DistributedMap {
         final ClientConfig ccfg = new ClientConfig();
         ccfg.getGroupConfig().setName("grupo3").setPassword("12345");
         ClientNetworkConfig cnc = new ClientNetworkConfig();
-        cnc.addAddress("192.168.0.13");
+        //cnc.addAddress("192.168.0.13");
         cnc.addAddress("192.168.0.23");
         ccfg.setNetworkConfig(cnc);
 
@@ -53,6 +58,7 @@ public class DistributedMap {
 
         query1(hz, list);
         query2(hz, list);
+        query3(hz, list);
 
         list.clear();
     }
@@ -97,5 +103,27 @@ public class DistributedMap {
         SortedSet<PoblatedDepartment> departments = collator.collate(result.values());
         departments.forEach(r -> System.out.println(r));
     }
+
+    private static void query3(
+            final HazelcastInstance hz,
+            final IList<CensoInfo> censoInfos) throws ExecutionException, InterruptedException {
+        System.out.println("Query 3");
+        JobTracker jobTracker = hz.getJobTracker("query3");
+
+        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
+        Job<String, CensoInfo> job = jobTracker.newJob(source);
+        ICompletableFuture<Map<String, Double>> future = job
+                .mapper(new Query3Mapper())
+                .combiner(new Query3CombinerFactory())
+                .reducer(new Query3ReducerFactory())
+                .submit();
+//        future.andThen( buildCallback() );
+
+        Map<String, Double> result = future.get();
+        List<Map.Entry<String, Double>> sortedResult = new ArrayList<>(result.entrySet());
+        Collections.sort(sortedResult, Comparator.comparingDouble(x -> -x.getValue()));
+        sortedResult.forEach(r -> System.out.println(r.getKey() + " " + String.format("%.2f", r.getValue())));
+    }
+
 
 }
