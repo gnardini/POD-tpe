@@ -5,15 +5,10 @@ import com.hazelcast.client.config.ClientNetworkConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.IList;
-import com.hazelcast.core.IMap;
 import com.hazelcast.mapreduce.Job;
 import com.hazelcast.mapreduce.JobTracker;
 import com.hazelcast.mapreduce.KeyValueSource;
-import com.hazelcast.query.EntryObject;
-import com.hazelcast.query.Predicate;
-import com.hazelcast.query.PredicateBuilder;
 import combiner.Query1CombinerFactory;
-import combiner.Query2CombinerFactory;
 import mapper.Query1Mapper;
 import mapper.Query2Mapper;
 import model.CensoInfo;
@@ -27,7 +22,7 @@ import java.util.concurrent.ExecutionException;
 
 public class DistributedMap {
 
-    private static final String CENSO_INFO_PATH = "/Volumes/SAKU-02/POD/pod-tpe/census100.csv";
+    private static final String CENSO_INFO_PATH = "census100.csv";
 
     private static final Comparator<Map.Entry<String, RegionCount>> ENTRYSET_COMPARATOR = new Comparator<Map.Entry<String, RegionCount>>() {
         @Override
@@ -42,15 +37,33 @@ public class DistributedMap {
         CsvReader csvReader = new CsvReader();
         List<CensoInfo> censoInfos = csvReader.readCensoFromCsv(CENSO_INFO_PATH);
 
-        /*final ClientConfig ccfg = new ClientConfig();
+        final ClientConfig ccfg = new ClientConfig();
+        ccfg.getGroupConfig().setName("grupo3").setPassword("12345");
+        ClientNetworkConfig cnc = new ClientNetworkConfig();
+        cnc.addAddress("192.168.0.13");
+        cnc.addAddress("192.168.0.23");
+        ccfg.setNetworkConfig(cnc);
+
         final HazelcastInstance hz = HazelcastClient.newHazelcastClient(ccfg);
 
-        JobTracker jobTracker = hz.getJobTracker("query1");
-
+        System.out.println("Adding censo info");
         final IList<CensoInfo> list = hz.getList( "censo-infos" );
         censoInfos.forEach(list::add);
+        System.out.println("Censo info added");
 
-        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(list);
+        query1(hz, list);
+        query2(hz, list);
+
+        list.clear();
+    }
+
+    private static void query1(
+            final HazelcastInstance hz,
+            final IList<CensoInfo> censoInfos) throws ExecutionException, InterruptedException {
+        System.out.println("Query 1");
+        JobTracker jobTracker = hz.getJobTracker("query1");
+
+        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
         Job<String, CensoInfo> job = jobTracker.newJob(source);
         ICompletableFuture<Map<String, RegionCount>> future = job
                 .mapper(new Query1Mapper())
@@ -62,21 +75,16 @@ public class DistributedMap {
 
         List<Map.Entry<String, RegionCount>> entrySet = new ArrayList<>(result.entrySet());
         Collections.sort(entrySet, ENTRYSET_COMPARATOR);
-        entrySet.forEach(r -> System.out.println(r.getKey() + "," + r.getValue().getCount()));*/
+        entrySet.forEach(r -> System.out.println(r.getKey() + ", " + Math.log(r.getValue().getCount())));
+    }
 
-        final ClientConfig ccfg = new ClientConfig();
-        ccfg.getGroupConfig().setName("grupo3").setPassword("12345");
-        ClientNetworkConfig cnc = new ClientNetworkConfig();
-        cnc.addAddress("192.168.0.13");
-        ccfg.setNetworkConfig(cnc);
-
-        final HazelcastInstance hz = HazelcastClient.newHazelcastClient(ccfg);
-
+    private static void query2(
+            final HazelcastInstance hz,
+            final IList<CensoInfo> censoInfos) throws ExecutionException, InterruptedException {
+        System.out.println("Query 2");
         JobTracker jobTracker = hz.getJobTracker("query2");
 
-        final IList<CensoInfo> list = hz.getList( "censo-infos" );
-        censoInfos.forEach(list::add);
-        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(list);
+        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
         Job<String, CensoInfo> job = jobTracker.newJob(source);
         ICompletableFuture<Map<String, PoblatedDepartment>> future = job
                 .mapper(new Query2Mapper())
@@ -88,9 +96,6 @@ public class DistributedMap {
         Query2Collator collator = new Query2Collator(10);
         SortedSet<PoblatedDepartment> departments = collator.collate(result.values());
         departments.forEach(r -> System.out.println(r));
-
-        list.clear();
-
     }
 
 }
