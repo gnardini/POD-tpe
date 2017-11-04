@@ -3,34 +3,31 @@ package reducer;
 import com.hazelcast.mapreduce.Reducer;
 import com.hazelcast.mapreduce.ReducerFactory;
 import model.PoblatedDepartment;
-import model.RegionCount;
 
-public class Query2ReducerFactory implements ReducerFactory<String, PoblatedDepartment, PoblatedDepartment> {
+public class Query2ReducerFactory implements ReducerFactory<String, Long, PoblatedDepartment> {
 
     @Override
-    public Reducer<PoblatedDepartment, PoblatedDepartment> newReducer(String department) {
+    public Reducer<Long, PoblatedDepartment> newReducer(String department) {
         return new Query2Reducer(department);
     }
 
-    private class Query2Reducer extends Reducer<PoblatedDepartment, PoblatedDepartment> {
+    private class Query2Reducer extends Reducer<Long, PoblatedDepartment> {
 
-        private PoblatedDepartment department;
+        private final String department;
+        private long total;
 
         public Query2Reducer(String department) {
+            this.department = department;
         }
 
         @Override
-        public void reduce(PoblatedDepartment value) {
-            if (department == null) {
-                department = value;
-                return;
-            }
-            department.addPoblation(department.getPoblation());
+        public void reduce(Long value) {
+            total += value;
         }
 
         @Override
         public PoblatedDepartment finalizeReduce() {
-            return department;
+            return new PoblatedDepartment(department, total);
         }
     }
 

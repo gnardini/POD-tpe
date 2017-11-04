@@ -2,31 +2,31 @@ package combiner;
 
 import com.hazelcast.mapreduce.Combiner;
 import com.hazelcast.mapreduce.CombinerFactory;
-import model.PoblatedDepartment;
 
-public class Query2CombinerFactory implements CombinerFactory<String, PoblatedDepartment, PoblatedDepartment> {
+public class Query2CombinerFactory implements CombinerFactory<String, Long, Long> {
 
     @Override
-    public Combiner<PoblatedDepartment, PoblatedDepartment> newCombiner(String key) {
-        return new Query2Combiner(key);
+    public Combiner<Long, Long> newCombiner(String key) {
+        return new Query2Combiner();
     }
 
-    private class Query2Combiner extends Combiner<PoblatedDepartment, PoblatedDepartment> {
+    private class Query2Combiner extends Combiner<Long, Long> {
 
-        private final PoblatedDepartment department;
+        private long total;
 
-        public Query2Combiner(String department) {
-            this.department = new PoblatedDepartment(department, new Long(0));
+        @Override
+        public void combine(Long value) {
+            total += value;
         }
 
         @Override
-        public void combine(PoblatedDepartment department) {
-            this.department.addPoblation(department.getPoblation());
+        public void reset() {
+            total = 0;
         }
 
         @Override
-        public PoblatedDepartment finalizeChunk() {
-            return department;
+        public Long finalizeChunk() {
+            return total;
         }
     }
 

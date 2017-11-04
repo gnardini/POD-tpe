@@ -1,4 +1,3 @@
-import collator.Query2Collator;
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientNetworkConfig;
@@ -8,14 +7,13 @@ import com.hazelcast.core.IList;
 import com.hazelcast.mapreduce.Job;
 import com.hazelcast.mapreduce.JobTracker;
 import com.hazelcast.mapreduce.KeyValueSource;
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import combiner.Query1CombinerFactory;
+import combiner.Query2CombinerFactory;
 import combiner.Query3CombinerFactory;
 import mapper.Query1Mapper;
 import mapper.Query2Mapper;
 import mapper.Query3Mapper;
 import model.CensoInfo;
-import model.EmploymentData;
 import model.PoblatedDepartment;
 import model.RegionCount;
 import reducer.Query1ReducerFactory;
@@ -25,18 +23,11 @@ import reducer.Query3ReducerFactory;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
+import static java.lang.System.exit;
+
 public class DistributedMap {
 
     private static final String CENSO_INFO_PATH = "census1000000.csv";
-
-    private static final Comparator<Map.Entry<String, RegionCount>> ENTRYSET_COMPARATOR = new Comparator<Map.Entry<String, RegionCount>>() {
-        @Override
-        public int compare(Map.Entry<String, RegionCount> o1, Map.Entry<String, RegionCount> o2) {
-            Integer i1 = o1.getValue().getCount();
-            Integer i2 = o2.getValue().getCount();
-            return i1.compareTo(i2);
-        }
-    };
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
         CsvReader csvReader = new CsvReader();
@@ -51,16 +42,20 @@ public class DistributedMap {
 
         final HazelcastInstance hz = HazelcastClient.newHazelcastClient(ccfg);
 
-        System.out.println("Adding censo info");
-        final IList<CensoInfo> list = hz.getList( "censo-infos" );
-        censoInfos.forEach(list::add);
-        System.out.println("Censo info added");
+        final IList<CensoInfo> list = hz.getList( "default" );
+        if (list.isEmpty()) {
+            System.out.println("Adding censo info");
+            censoInfos.forEach(list::add);
+            System.out.println("Censo info added");
+        }
 
+        long time = System.nanoTime();
         query1(hz, list);
-        query2(hz, list);
+        query2(hz, list, "Santa Fe", 10);
         query3(hz, list);
+        System.out.println((System.nanoTime() - time) / 1E9);
 
-        list.clear();
+        exit(0);
     }
 
     private static void query1(
@@ -76,32 +71,36 @@ public class DistributedMap {
                 .combiner(new Query1CombinerFactory())
                 .reducer(new Query1ReducerFactory())
                 .submit();
-//        future.andThen( buildCallback() );
         Map<String, RegionCount> result = future.get();
 
         List<Map.Entry<String, RegionCount>> entrySet = new ArrayList<>(result.entrySet());
-        Collections.sort(entrySet, ENTRYSET_COMPARATOR);
-        entrySet.forEach(r -> System.out.println(r.getKey() + ", " + Math.log(r.getValue().getCount())));
+        Collections.sort(entrySet, Comparator.comparingInt(e -> e.getValue().getCount()));
+        entrySet.forEach(r -> System.out.println(r.getKey() + ", " + r.getValue().getCount()));
     }
 
     private static void query2(
             final HazelcastInstance hz,
-            final IList<CensoInfo> censoInfos) throws ExecutionException, InterruptedException {
+            final IList<CensoInfo> censoInfos,
+            final String province,
+            final int top) throws ExecutionException, InterruptedException {
         System.out.println("Query 2");
         JobTracker jobTracker = hz.getJobTracker("query2");
 
         final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
         Job<String, CensoInfo> job = jobTracker.newJob(source);
         ICompletableFuture<Map<String, PoblatedDepartment>> future = job
-                .mapper(new Query2Mapper())
+                .mapper(new Query2Mapper(province))
+                .combiner(new Query2CombinerFactory())
                 .reducer(new Query2ReducerFactory())
                 .submit();
-//        future.andThen( buildCallback() );
 
         Map<String, PoblatedDepartment> result = future.get();
-        Query2Collator collator = new Query2Collator(10);
-        SortedSet<PoblatedDepartment> departments = collator.collate(result.values());
-        departments.forEach(r -> System.out.println(r));
+        List<PoblatedDepartment> departments = new ArrayList<>(result.values());
+        Collections.sort(departments);
+        if (departments.size() > top) {
+            departments = departments.subList(0, top);
+        }
+        departments.forEach(System.out::println);
     }
 
     private static void query3(
