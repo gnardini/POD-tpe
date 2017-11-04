@@ -1,4 +1,3 @@
-import collator.Query2Collator;
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientNetworkConfig;
@@ -9,6 +8,7 @@ import com.hazelcast.mapreduce.Job;
 import com.hazelcast.mapreduce.JobTracker;
 import com.hazelcast.mapreduce.KeyValueSource;
 import combiner.Query1CombinerFactory;
+import combiner.Query2CombinerFactory;
 import mapper.Query1Mapper;
 import mapper.Query2Mapper;
 import model.CensoInfo;
@@ -25,15 +25,6 @@ import static java.lang.System.exit;
 public class DistributedMap {
 
     private static final String CENSO_INFO_PATH = "census1000000.csv";
-
-    private static final Comparator<Map.Entry<String, RegionCount>> ENTRYSET_COMPARATOR = new Comparator<Map.Entry<String, RegionCount>>() {
-        @Override
-        public int compare(Map.Entry<String, RegionCount> o1, Map.Entry<String, RegionCount> o2) {
-            Integer i1 = o1.getValue().getCount();
-            Integer i2 = o2.getValue().getCount();
-            return i2.compareTo(i1);
-        }
-    };
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
         CsvReader csvReader = new CsvReader();
@@ -76,11 +67,10 @@ public class DistributedMap {
                 .combiner(new Query1CombinerFactory())
                 .reducer(new Query1ReducerFactory())
                 .submit();
-//        future.andThen( buildCallback() );
         Map<String, RegionCount> result = future.get();
 
         List<Map.Entry<String, RegionCount>> entrySet = new ArrayList<>(result.entrySet());
-        Collections.sort(entrySet, ENTRYSET_COMPARATOR);
+        Collections.sort(entrySet, Comparator.comparingInt(e -> e.getValue().getCount()));
         entrySet.forEach(r -> System.out.println(r.getKey() + ", " + r.getValue().getCount()));
     }
 
@@ -96,14 +86,17 @@ public class DistributedMap {
         Job<String, CensoInfo> job = jobTracker.newJob(source);
         ICompletableFuture<Map<String, PoblatedDepartment>> future = job
                 .mapper(new Query2Mapper(province))
+                .combiner(new Query2CombinerFactory())
                 .reducer(new Query2ReducerFactory())
                 .submit();
-//        future.andThen( buildCallback() );
 
         Map<String, PoblatedDepartment> result = future.get();
-        Query2Collator collator = new Query2Collator(top);
-        SortedSet<PoblatedDepartment> departments = collator.collate(result.values());
-        departments.forEach(r -> System.out.println(r));
+        List<PoblatedDepartment> departments = new ArrayList<>(result.values());
+        Collections.sort(departments);
+        if (departments.size() > top) {
+            departments = departments.subList(0, top);
+        }
+        departments.forEach(System.out::println);
     }
 
 }

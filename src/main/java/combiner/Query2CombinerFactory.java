@@ -20,6 +20,11 @@ public class Query2CombinerFactory implements CombinerFactory<String, Long, Long
         }
 
         @Override
+        public void reset() {
+            total = 0;
+        }
+
+        @Override
         public Long finalizeChunk() {
             return total;
         }
