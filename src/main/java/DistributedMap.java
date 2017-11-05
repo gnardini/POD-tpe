@@ -4,26 +4,24 @@ import com.hazelcast.client.config.ClientNetworkConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.IList;
+import com.hazelcast.core.IMap;
 import com.hazelcast.mapreduce.Job;
 import com.hazelcast.mapreduce.JobTracker;
 import com.hazelcast.mapreduce.KeyValueSource;
 import combiner.Query1CombinerFactory;
 import combiner.Query2CombinerFactory;
 import combiner.Query3CombinerFactory;
-import mapper.Query1Mapper;
-import mapper.Query2Mapper;
-import mapper.Query3Mapper;
+import mapper.*;
 import model.CensoInfo;
 import model.PoblatedDepartment;
 import model.RegionCount;
-import reducer.Query1ReducerFactory;
-import reducer.Query2ReducerFactory;
-import reducer.Query3ReducerFactory;
+import reducer.*;
 
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 import static java.lang.System.exit;
+import static java.lang.System.setOut;
 
 public class DistributedMap {
 
@@ -53,6 +51,7 @@ public class DistributedMap {
         query1(hz, list);
         query2(hz, list, "Santa Fe", 10);
         query3(hz, list);
+        query4(hz, list);
         System.out.println((System.nanoTime() - time) / 1E9);
 
         exit(0);
@@ -124,5 +123,37 @@ public class DistributedMap {
         sortedResult.forEach(r -> System.out.println(r.getKey() + " " + String.format("%.2f", r.getValue())));
     }
 
+    private static void query4(
+            final HazelcastInstance hz,
+            final IList<CensoInfo> censoInfos) throws ExecutionException, InterruptedException {
+        System.out.println("Query 4");
+        JobTracker jobTracker = hz.getJobTracker("query4");
 
+        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
+        Job<String, CensoInfo> jobA = jobTracker.newJob(source);
+        Map<Integer, String> midResult = jobA
+                .mapper(new Query4aMapper())
+                //.combiner(new Query4aMapper())
+                .reducer(new Query4aReducerFactory())
+                .submit()
+                .get();
+
+        System.out.println("entre queries");
+
+        IMap<Integer, String> bData = hz.getMap("query4map");
+        bData.putAll(midResult);
+
+        final KeyValueSource<Integer, String> sourceB = KeyValueSource.fromMap(bData);
+        Job<Integer, String> jobB = jobTracker.newJob(sourceB);
+        Map<String, Integer> result = jobB
+                .mapper(new Query4bMapper())
+                //.combiner(new Query4aMapper())
+                .reducer(new Query4bReducerFactory())
+                .submit()
+                .get();
+
+        List<Map.Entry<String, Integer>> sortedResult = new ArrayList<>(result.entrySet());
+        Collections.sort(sortedResult, Comparator.comparingInt(x -> -x.getValue()));
+        sortedResult.forEach(r -> System.out.println(r.getKey() + " " + r.getValue()));
+    }
 }
