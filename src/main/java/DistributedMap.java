@@ -77,7 +77,7 @@ public class DistributedMap {
         Map<String, RegionCount> result = future.get();
 
         List<Map.Entry<String, RegionCount>> entrySet = new ArrayList<>(result.entrySet());
-        Collections.sort(entrySet, Comparator.comparingInt(e -> e.getValue().getCount()));
+        Collections.sort(entrySet, Comparator.comparingInt(e -> -e.getValue().getCount()));
         entrySet.forEach(r -> System.out.println(r.getKey() + "," + r.getValue().getCount()));
         logger.info("Termino el map/reduce para la query 1");
     }
