@@ -1,16 +1,19 @@
 package model;
 
-import java.io.IOException;
-
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
+
+import java.io.IOException;
 
 public class PopulationPerRegion implements DataSerializable {
 
 	private String region;
 	private int population;
-	
+
+	public PopulationPerRegion() {
+	}
+
 	public PopulationPerRegion(String region, int population) {
 		this.region = region;
 		this.population = population;
@@ -24,18 +27,18 @@ public class PopulationPerRegion implements DataSerializable {
 		return region;
 	}
 	
-	public PopulationPerRegion addPopulation(String region, int population){
+	public void addPopulation(String region, int population) {
 		if(!this.region.equals(region)){
 			throw new IllegalArgumentException();
 		}
-		return new PopulationPerRegion(region, population+this.population);
+		this.population += population;
 	}
 	
-	public PopulationPerRegion addPopulation(PopulationPerRegion ppr){
+	public void addPopulation(PopulationPerRegion ppr){
 		if(!ppr.region.equals(region)){
 			throw new IllegalArgumentException();
 		}
-		return new PopulationPerRegion(region, population+ppr.population); 
+		population += ppr.population;
 	}
 	
 	@Override

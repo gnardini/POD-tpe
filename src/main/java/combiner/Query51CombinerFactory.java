@@ -18,10 +18,10 @@ public class Query51CombinerFactory implements CombinerFactory<Integer, String, 
 
         @Override
         public void combine(String regionString) {
-            if(region == null){
-            	region = new PopulationPerRegion(regionString, 1);
-            }else{
-            	region.addPopulation(regionString, 1);
+            if (region == null) {
+                region = new PopulationPerRegion(regionString, 1);
+            } else {
+                region.addPopulation(regionString, 1);
             }
         }
 

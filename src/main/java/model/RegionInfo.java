@@ -1,16 +1,19 @@
 package model;
 
-import java.io.IOException;
-
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
+
+import java.io.IOException;
 
 public class RegionInfo implements DataSerializable {
 
 	private int homes;
 	private int population;
-	
+
+	public RegionInfo() {
+	}
+
 	public RegionInfo(int homes, int population) {
 		this.homes = homes;
 		this.population = population;

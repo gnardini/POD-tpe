@@ -1,33 +1,3 @@
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
-
-import mapper.Query1Mapper;
-import mapper.Query2Mapper;
-import mapper.Query3Mapper;
-import mapper.Query51Mapper;
-import mapper.Query52Mapper;
-import mapper.Query6Mapper;
-import mapper.Query7aMapper;
-import mapper.Query7bMapper;
-import model.CensoInfo;
-import model.PoblatedDepartment;
-import model.PopulationPerRegion;
-import model.RegionCount;
-import reducer.Query1ReducerFactory;
-import reducer.Query2ReducerFactory;
-import reducer.Query3ReducerFactory;
-import reducer.Query51ReducerFactory;
-import reducer.Query52ReducerFactory;
-import reducer.Query6ReducerFactory;
-import reducer.Query7aReducerFactory;
-import reducer.Query7bReducerFactory;
-
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientNetworkConfig;
@@ -38,14 +8,17 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.mapreduce.Job;
 import com.hazelcast.mapreduce.JobTracker;
 import com.hazelcast.mapreduce.KeyValueSource;
-import combiner.Query1CombinerFactory;
-import combiner.Query2CombinerFactory;
-import combiner.Query3CombinerFactory;
-import combiner.Query51CombinerFactory;
-import combiner.Query52CombinerFactory;
-import combiner.Query6CombinerFactory;
-import combiner.Query7aCombinerFactory;
-import combiner.Query7bCombinerFactory;
+import combiner.*;
+import mapper.*;
+import model.CensoInfo;
+import model.PoblatedDepartment;
+import model.PopulationPerRegion;
+import model.RegionCount;
+import reducer.*;
+
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 public class DistributedMap {
 
@@ -59,7 +32,6 @@ public class DistributedMap {
         ccfg.getGroupConfig().setName("grupo3").setPassword("12345");
         ClientNetworkConfig cnc = new ClientNetworkConfig();
         cnc.addAddress("192.168.0.13");
-//        cnc.addAddress("192.168.0.23");
         ccfg.setNetworkConfig(cnc);
 
         final HazelcastInstance hz = HazelcastClient.newHazelcastClient(ccfg);
@@ -74,7 +46,7 @@ public class DistributedMap {
         long time = System.nanoTime();
         query1(hz, list);
         query2(hz, list, "Santa Fe", 10);
-        query3(hz, list); 
+        query3(hz, list);
         query5(hz, list);
         query6(hz, list, 5);
         query7(hz, list, 4);
@@ -163,6 +135,7 @@ public class DistributedMap {
                 .reducer(new Query51ReducerFactory())
                 .submit();
 //        future.andThen( buildCallback() );
+
         final IMap<Integer, PopulationPerRegion> map = hz.getMap("query51map");
         future1.get().forEach(map::put);
         final KeyValueSource<Integer, PopulationPerRegion> source2 = KeyValueSource.fromMap(map);

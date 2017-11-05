@@ -5,7 +5,7 @@ import model.PopulationPerRegion;
 import com.hazelcast.mapreduce.Reducer;
 import com.hazelcast.mapreduce.ReducerFactory;
 
-public class Query51ReducerFactory implements ReducerFactory<Integer, PopulationPerRegion, PopulationPerRegion>{
+public class Query51ReducerFactory implements ReducerFactory<Integer, PopulationPerRegion, PopulationPerRegion> {
 
     @Override
     public Reducer<PopulationPerRegion, PopulationPerRegion> newReducer(Integer key) {
@@ -14,20 +14,18 @@ public class Query51ReducerFactory implements ReducerFactory<Integer, Population
 
     private class Query51Reducer extends Reducer<PopulationPerRegion, PopulationPerRegion> {
 
-        private PopulationPerRegion region = null;
+        private String regionString;
+        private int count = 0;
 
         @Override
         public void reduce(PopulationPerRegion region) {
-        	if(region == null){
-            	this.region = region;
-            }else{
-            	this.region.addPopulation(region);
-            }
+            this.regionString = region.getRegion();
+            this.count += region.getPopulation();
         }
 
         @Override
         public PopulationPerRegion finalizeReduce() {
-            return region;
+            return new PopulationPerRegion(regionString, count);
         }
     }
 
