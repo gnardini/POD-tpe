@@ -14,6 +14,7 @@ import model.CensoInfo;
 import model.PoblatedDepartment;
 import model.PopulationPerRegion;
 import model.RegionCount;
+import org.apache.log4j.Logger;
 import reducer.*;
 
 import java.util.*;
@@ -23,24 +24,29 @@ import java.util.stream.Collectors;
 public class DistributedMap {
 
     private static final String CENSO_INFO_PATH = "census1000000.csv";
+    private static final Logger logger = Logger.getRootLogger();
+    private static final String GROUP_NAME = "grupo3"; // "53191-53202-54387-LEGAJO_DIEGO";
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
         CsvReader csvReader = new CsvReader();
+        logger.info("Empezando lectura de CSV de entrada");
         List<CensoInfo> censoInfos = csvReader.readCensoFromCsv(CENSO_INFO_PATH);
+        logger.info("CSV de entrada leido");
 
         final ClientConfig ccfg = new ClientConfig();
-        ccfg.getGroupConfig().setName("grupo3").setPassword("12345");
+        ccfg.getGroupConfig().setName(GROUP_NAME).setPassword("12345");
         ClientNetworkConfig cnc = new ClientNetworkConfig();
         cnc.addAddress("192.168.0.13");
         ccfg.setNetworkConfig(cnc);
 
         final HazelcastInstance hz = HazelcastClient.newHazelcastClient(ccfg);
 
+
         final IList<CensoInfo> list = hz.getList( "default" );
         if (list.isEmpty()) {
-            System.out.println("Adding censo info");
+            logger.info("Subiendo informacion a Hazelcast");
             censoInfos.forEach(list::add);
-            System.out.println("Censo info added");
+            logger.info("Informacion subida a Hazelcast");
         }
 
         long time = System.nanoTime();
@@ -58,9 +64,9 @@ public class DistributedMap {
     private static void query1(
             final HazelcastInstance hz,
             final IList<CensoInfo> censoInfos) throws ExecutionException, InterruptedException {
-        System.out.println("Query 1");
-        JobTracker jobTracker = hz.getJobTracker("query1");
+        logger.info("Empezando map/reduce para la query 1");
 
+        JobTracker jobTracker = hz.getJobTracker("query1");
         final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
         Job<String, CensoInfo> job = jobTracker.newJob(source);
         ICompletableFuture<Map<String, RegionCount>> future = job
@@ -72,7 +78,8 @@ public class DistributedMap {
 
         List<Map.Entry<String, RegionCount>> entrySet = new ArrayList<>(result.entrySet());
         Collections.sort(entrySet, Comparator.comparingInt(e -> e.getValue().getCount()));
-        entrySet.forEach(r -> System.out.println(r.getKey() + ", " + r.getValue().getCount()));
+        entrySet.forEach(r -> System.out.println(r.getKey() + "," + r.getValue().getCount()));
+        logger.info("Termino el map/reduce para la query 1");
     }
 
     private static void query2(
@@ -80,9 +87,9 @@ public class DistributedMap {
             final IList<CensoInfo> censoInfos,
             final String province,
             final int top) throws ExecutionException, InterruptedException {
-        System.out.println("Query 2");
-        JobTracker jobTracker = hz.getJobTracker("query2");
+        logger.info("Empezando map/reduce para la query 2");
 
+        JobTracker jobTracker = hz.getJobTracker("query2");
         final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
         Job<String, CensoInfo> job = jobTracker.newJob(source);
         ICompletableFuture<Map<String, PoblatedDepartment>> future = job
@@ -98,14 +105,15 @@ public class DistributedMap {
             departments = departments.subList(0, top);
         }
         departments.forEach(System.out::println);
+        logger.info("Termino el map/reduce para la query 2");
     }
 
     private static void query3(
             final HazelcastInstance hz,
             final IList<CensoInfo> censoInfos) throws ExecutionException, InterruptedException {
-        System.out.println("Query 3");
-        JobTracker jobTracker = hz.getJobTracker("query3");
+        logger.info("Empezando map/reduce para la query 3");
 
+        JobTracker jobTracker = hz.getJobTracker("query3");
         final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
         Job<String, CensoInfo> job = jobTracker.newJob(source);
         ICompletableFuture<Map<String, Double>> future = job
@@ -117,16 +125,17 @@ public class DistributedMap {
         Map<String, Double> result = future.get();
         List<Map.Entry<String, Double>> sortedResult = new ArrayList<>(result.entrySet());
         Collections.sort(sortedResult, Comparator.comparingDouble(x -> -x.getValue()));
-        sortedResult.forEach(r -> System.out.println(r.getKey() + " " + String.format("%.2f", r.getValue())));
+        sortedResult.forEach(r -> System.out.println(r.getKey() + "," + String.format("%.2f", r.getValue())));
+        logger.info("Termino el map/reduce para la query 3");
     }
 
 
     private static void query5(
             final HazelcastInstance hz,
             final IList<CensoInfo> censoInfos) throws ExecutionException, InterruptedException {
-        System.out.println("Query 5");
-        JobTracker jobTracker = hz.getJobTracker("query5");
+        logger.info("Empezando map/reduce para la query 5");
 
+        JobTracker jobTracker = hz.getJobTracker("query5");
         final KeyValueSource<String, CensoInfo> source1 = KeyValueSource.fromList(censoInfos);
         Job<String, CensoInfo> job1 = jobTracker.newJob(source1);
         ICompletableFuture<Map<Integer, PopulationPerRegion>> future1 = job1
@@ -148,16 +157,17 @@ public class DistributedMap {
         Map<String, Double> result = future2.get();
         List<Map.Entry<String, Double>> sortedResult = new ArrayList<>(result.entrySet());
         Collections.sort(sortedResult, Comparator.comparingDouble(x -> -x.getValue()));
-        sortedResult.forEach(r -> System.out.println(r.getKey() + " " + String.format("%.2f", r.getValue())));   
+        sortedResult.forEach(r -> System.out.println(r.getKey() + "," + String.format("%.2f", r.getValue())));
+        logger.info("Termino el map/reduce para la query 5");
     }
     
     private static void query6(
             final HazelcastInstance hz,
             final IList<CensoInfo> censoInfos,
             final int n) throws ExecutionException, InterruptedException {
-        System.out.println("Query 6");
-        JobTracker jobTracker = hz.getJobTracker("query6");
+        logger.info("Empezando map/reduce para la query 6");
 
+        JobTracker jobTracker = hz.getJobTracker("query6");
         final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
         Job<String, CensoInfo> job = jobTracker.newJob(source);
         ICompletableFuture<Map<String, Integer>> future = job
@@ -170,16 +180,17 @@ public class DistributedMap {
         List<Map.Entry<String, Integer>> sortedResult = new ArrayList<>(result.entrySet());
         sortedResult = sortedResult.stream().filter(entry -> entry.getValue() >= n).collect(Collectors.toList());
         Collections.sort(sortedResult, Comparator.comparingInt(x -> -x.getValue()));
-        sortedResult.forEach(r -> System.out.println(r.getKey() + " " + r.getValue()));
+        sortedResult.forEach(r -> System.out.println(r.getKey() + "," + r.getValue()));
+        logger.info("Termino el map/reduce para la query 6");
     }
 
     private static void query7(
             final HazelcastInstance hz,
             final IList<CensoInfo> censoInfos,
             final int n) throws ExecutionException, InterruptedException {
-        System.out.println("Query 7");
-        JobTracker jobTracker = hz.getJobTracker("query7");
+        logger.info("Empezando map/reduce para la query 7");
 
+        JobTracker jobTracker = hz.getJobTracker("query7");
         final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
         Job<String, CensoInfo> jobA = jobTracker.newJob(source);
         ICompletableFuture<Map<String, Set<String>>> future = jobA
@@ -206,7 +217,8 @@ public class DistributedMap {
         List<Map.Entry<String, Integer>> sortedResult = new ArrayList<>(finalResult.entrySet());
         sortedResult = sortedResult.stream().filter(entry -> entry.getValue() >= n).collect(Collectors.toList());
         Collections.sort(sortedResult, Comparator.comparingInt(x -> -x.getValue()));
-        sortedResult.forEach(r -> System.out.println(r.getKey() + " " + r.getValue()));
+        sortedResult.forEach(r -> System.out.println(r.getKey() + "," + r.getValue()));
+        logger.info("Termino el map/reduce para la query 7");
     }
 
 }
