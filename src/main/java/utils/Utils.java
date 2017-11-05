@@ -11,7 +11,6 @@ public class Utils {
     public static Map<String, String> provinceToRegion() {
         if (regionMap == null) {
             regionMap = new HashMap<>();
-            // Pueden faltar
             regionMap.put("Ciudad Autónoma de Buenos Aires", "Región Buenos Aires");
             regionMap.put("Buenos Aires", "Región Buenos Aires");
             regionMap.put("Corrientes", "Región del Norte Grande Argentino");
