@@ -134,7 +134,6 @@ public class DistributedMap {
                 .combiner(new Query51CombinerFactory())
                 .reducer(new Query51ReducerFactory())
                 .submit();
-//        future.andThen( buildCallback() );
 
         final IMap<Integer, PopulationPerRegion> map = hz.getMap("query51map");
         future1.get().forEach(map::put);
