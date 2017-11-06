@@ -18,7 +18,7 @@ public class Query4bReducerFactory implements ReducerFactory<String, Integer, In
 
         @Override
         public void reduce(Integer c) {
-            count += 1;
+            count += c;
         }
 
         @Override

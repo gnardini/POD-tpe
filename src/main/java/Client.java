@@ -57,28 +57,25 @@ public class Client {
             e.printStackTrace();
         }
 
-        CsvReader csvReader = new CsvReader();
-        logger.info("Empezando lectura de CSV de entrada");
-        List<CensoInfo> censoInfos = csvReader.readCensoFromCsv(inPathString);
-        logger.info("CSV de entrada leido");
 
         final ClientConfig ccfg = new ClientConfig();
         ccfg.getGroupConfig().setName(GROUP_NAME);
         ClientNetworkConfig netConfig = new ClientNetworkConfig();
         for(String ip : addresses.split(";")){
-        	netConfig.addAddress(ip);
+            netConfig.addAddress(ip);
         }
         ccfg.setNetworkConfig(netConfig);
 
         final HazelcastInstance hz = HazelcastClient.newHazelcastClient(ccfg);
 
-
+        CsvReader csvReader = new CsvReader();
         final IList<CensoInfo> list = hz.getList( GROUP_NAME + "-default" );
         if (list.isEmpty()) {
-            logger.info("Subiendo informacion a Hazelcast");
-            censoInfos.forEach(list::add);
-            logger.info("Informacion subida a Hazelcast");
+            logger.info("Empezando lectura de CSV de entrada");
+            csvReader.readCensoFromCsv(inPathString, list);
+            logger.info("CSV de entrada subido a Hazelcast");
         }
+
 
         int query;
         try{
@@ -206,7 +203,7 @@ public class Client {
         Job<String, CensoInfo> jobA = jobTracker.newJob(source);
         Map<Integer, String> midResult = jobA
                 .mapper(new Query4aMapper())
-                //.combiner(new Query4aMapper())
+                .combiner(new Query4aCombinerFactory())
                 .reducer(new Query4aReducerFactory())
                 .submit()
                 .get();
@@ -218,7 +215,7 @@ public class Client {
         Job<Integer, String> jobB = jobTracker.newJob(sourceB);
         Map<String, Integer> result = jobB
                 .mapper(new Query4bMapper())
-                //.combiner(new Query4aMapper())
+                .combiner(new Query4bCombinerFactory())
                 .reducer(new Query4bReducerFactory())
                 .submit()
                 .get();
