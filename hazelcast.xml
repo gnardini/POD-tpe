@@ -3,8 +3,7 @@
            xmlns="http://www.hazelcast.com/schema/config"
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <group>
-        <name>grupo3</name>
-        <password>12345</password>
+        <name>53191-53202-54387-54377</name>
     </group>
     <properties>
         <property name="hazelcast.socket.bind.any">false</property>
