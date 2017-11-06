@@ -1,3 +1,40 @@
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+
+import mapper.Query1Mapper;
+import mapper.Query2Mapper;
+import mapper.Query3Mapper;
+import mapper.Query4aMapper;
+import mapper.Query4bMapper;
+import mapper.Query51Mapper;
+import mapper.Query52Mapper;
+import mapper.Query6Mapper;
+import mapper.Query7aMapper;
+import mapper.Query7bMapper;
+import model.CensoInfo;
+import model.PoblatedDepartment;
+import model.PopulationPerRegion;
+import model.RegionCount;
+
+import org.apache.log4j.Logger;
+
+import reducer.Query1ReducerFactory;
+import reducer.Query2ReducerFactory;
+import reducer.Query3ReducerFactory;
+import reducer.Query4aReducerFactory;
+import reducer.Query4bReducerFactory;
+import reducer.Query51ReducerFactory;
+import reducer.Query52ReducerFactory;
+import reducer.Query6ReducerFactory;
+import reducer.Query7aReducerFactory;
+import reducer.Query7bReducerFactory;
+
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientNetworkConfig;
@@ -8,35 +45,48 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.mapreduce.Job;
 import com.hazelcast.mapreduce.JobTracker;
 import com.hazelcast.mapreduce.KeyValueSource;
-import combiner.*;
-import mapper.*;
-import model.CensoInfo;
-import model.PoblatedDepartment;
-import model.PopulationPerRegion;
-import model.RegionCount;
-import org.apache.log4j.Logger;
-import reducer.*;
-
-import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
+import combiner.Query1CombinerFactory;
+import combiner.Query2CombinerFactory;
+import combiner.Query3CombinerFactory;
+import combiner.Query51CombinerFactory;
+import combiner.Query52CombinerFactory;
+import combiner.Query6CombinerFactory;
+import combiner.Query7aCombinerFactory;
+import combiner.Query7bCombinerFactory;
 
 public class DistributedMap {
 
-    private static final String CENSO_INFO_PATH = "census1000000.csv";
+    private static final String CENSO_INFO_PATH = "census1000000.csv"; //No se usa más
     private static final Logger logger = Logger.getRootLogger();
-    private static final String GROUP_NAME = "grupo3"; // "53191-53202-54387-LEGAJO_DIEGO";
+    private static final String GROUP_NAME = "grupo3"; // "53191-53202-54387-54377";
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
+    	
+    	String addresses = System.getProperty("addresses");
+    	String queryString = System.getProperty("query");
+    	String inPathString = System.getProperty("inPath");
+    	String outPathString = System.getProperty("outPath");
+    	String timeOutPathString = System.getProperty("timeOutPath");
+    	String paramN = System.getProperty("n");
+    	String paramProv = System.getProperty("prov");
+    	
+    	if( addresses == null || queryString == null || inPathString == null ||
+    			outPathString == null || timeOutPathString == null){
+    		throw new IllegalArgumentException(" addresses, query, inPath, outPath and"
+    				+ " timeOutPath arguments must be present.");	
+    	}
+    	
         CsvReader csvReader = new CsvReader();
         logger.info("Empezando lectura de CSV de entrada");
-        List<CensoInfo> censoInfos = csvReader.readCensoFromCsv(CENSO_INFO_PATH);
+        List<CensoInfo> censoInfos = csvReader.readCensoFromCsv(inPathString);
         logger.info("CSV de entrada leido");
 
         final ClientConfig ccfg = new ClientConfig();
         ccfg.getGroupConfig().setName(GROUP_NAME).setPassword("12345");
         ClientNetworkConfig cnc = new ClientNetworkConfig();
-        cnc.addAddress("192.168.0.13");
+        for(String ip : addresses.split(";")){
+        	cnc.addAddress(ip);
+        }
         ccfg.setNetworkConfig(cnc);
 
         final HazelcastInstance hz = HazelcastClient.newHazelcastClient(ccfg);
@@ -50,13 +100,50 @@ public class DistributedMap {
         }
 
         long time = System.nanoTime();
-        query1(hz, list);
-        query2(hz, list, "Santa Fe", 10);
-        query3(hz, list);
-        query4(hz, list);
-        query5(hz, list);
-        query6(hz, list, 5);
-        query7(hz, list, 4);
+        int query;
+        try{
+        	query = Integer.parseInt(queryString);
+        	if(query<1 || query>7){
+        		throw new Exception();
+        	}	
+        }catch(Exception e){
+        	throw new IllegalArgumentException("query argument must be a integer from 1 to 7");
+        }
+        
+        switch(query){
+        	case 1:
+        		query1(hz, list);
+        		break;
+        	case 2:
+        		if(paramProv == null || paramN == null){
+        			throw new IllegalArgumentException("prov and n arguments must be present for"
+        					+ "query 2");
+        		}
+        		query2(hz, list, paramProv, Integer.parseInt(paramN));
+        		break;
+        	case 3:
+        		query3(hz, list);
+        		break;
+        	case 4:
+        		query4(hz, list);
+        		break;
+        	case 5:
+        		query5(hz, list);
+        		break;
+        	case 6:
+        		if(paramN == null){
+        			throw new IllegalArgumentException("n argument must be present for"
+        					+ "query 6");
+        		}
+        		query6(hz, list, Integer.parseInt(paramN));
+        	case 7:
+        		if(paramN == null){
+        			throw new IllegalArgumentException("n argument must be present for"
+        					+ "query 7");
+        		}
+        		query7(hz, list, Integer.parseInt(paramN));
+        }
+        
         System.out.println((System.nanoTime() - time) / 1E9);
 
         System.exit(0);
