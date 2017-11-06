@@ -1,3 +1,17 @@
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+
+import org.apache.log4j.FileAppender;
+import org.apache.log4j.Logger;
+
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientNetworkConfig;
@@ -8,21 +22,39 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.mapreduce.Job;
 import com.hazelcast.mapreduce.JobTracker;
 import com.hazelcast.mapreduce.KeyValueSource;
-import combiner.*;
-import mapper.*;
+
+import combiner.Query1CombinerFactory;
+import combiner.Query2CombinerFactory;
+import combiner.Query3CombinerFactory;
+import combiner.Query51CombinerFactory;
+import combiner.Query52CombinerFactory;
+import combiner.Query6CombinerFactory;
+import combiner.Query7aCombinerFactory;
+import combiner.Query7bCombinerFactory;
+import mapper.Query1Mapper;
+import mapper.Query2Mapper;
+import mapper.Query3Mapper;
+import mapper.Query4aMapper;
+import mapper.Query4bMapper;
+import mapper.Query51Mapper;
+import mapper.Query52Mapper;
+import mapper.Query6Mapper;
+import mapper.Query7aMapper;
+import mapper.Query7bMapper;
 import model.CensoInfo;
 import model.PoblatedDepartment;
 import model.PopulationPerRegion;
 import model.RegionCount;
-import org.apache.log4j.FileAppender;
-import org.apache.log4j.Logger;
-import reducer.*;
-
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
-import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
+import reducer.Query1ReducerFactory;
+import reducer.Query2ReducerFactory;
+import reducer.Query3ReducerFactory;
+import reducer.Query4aReducerFactory;
+import reducer.Query4bReducerFactory;
+import reducer.Query51ReducerFactory;
+import reducer.Query52ReducerFactory;
+import reducer.Query6ReducerFactory;
+import reducer.Query7aReducerFactory;
+import reducer.Query7bReducerFactory;
 
 public class Client {
 

@@ -15,6 +15,9 @@ public class EmploymentData implements DataSerializable {
         this.employedPeople = employeddPeople;
         this.unemployedPeople = unemployedPeople;
     }
+    
+    public EmploymentData() {
+    }
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
