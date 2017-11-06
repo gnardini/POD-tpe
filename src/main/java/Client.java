@@ -24,7 +24,7 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-public class DistributedMap {
+public class Client {
 
     private static final Logger logger = Logger.getRootLogger();
     private static final String GROUP_NAME = "53191-53202-54387-54377";
