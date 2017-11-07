@@ -7,13 +7,13 @@ import utils.Utils;
 
 import java.util.Map;
 
-public class Query51Mapper implements Mapper<Integer, CensoInfo, Integer, String> {
+public class Query5Mapper implements Mapper<Integer, CensoInfo, String, Integer> {
 
     private static final Map<String, String> regionMap = Utils.provinceToRegion();
 
     @Override
-    public void map(Integer homeId, CensoInfo info, Context<Integer, String> context) {
-        context.emit(homeId, regionMap.get(info.getProvince()));
+    public void map(Integer homeId, CensoInfo info, Context<String, Integer> context) {
+        context.emit(regionMap.get(info.getProvince()), homeId);
     }
 
 }

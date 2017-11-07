@@ -232,26 +232,15 @@ public class Client {
 
         logger.info("Empezando map/reduce para la query 5");
         JobTracker jobTracker = hz.getJobTracker(GROUP_NAME + "-query5");
-        final KeyValueSource<Integer, CensoInfo> source1 = KeyValueSource.fromMultiMap(map);
-        Job<Integer, CensoInfo> job1 = jobTracker.newJob(source1);
-        ICompletableFuture<Map<Integer, PopulationPerRegion>> future1 = job1
-                .mapper(new Query51Mapper())
-                .combiner(new Query51CombinerFactory())
-                .reducer(new Query51ReducerFactory())
+        final KeyValueSource<Integer, CensoInfo> source = KeyValueSource.fromMultiMap(map);
+        Job<Integer, CensoInfo> job = jobTracker.newJob(source);
+        ICompletableFuture<Map<String, Double>> future = job
+                .mapper(new Query5Mapper())
+                .combiner(new Query5CombinerFactory())
+                .reducer(new Query5ReducerFactory())
                 .submit();
 
-        final IMap<Integer, PopulationPerRegion> map2 = hz.getMap(GROUP_NAME + "-query51map");
-        map2.clear();
-        future1.get().forEach(map2::put);
-        final KeyValueSource<Integer, PopulationPerRegion> source2 = KeyValueSource.fromMap(map2);
-        Job<Integer, PopulationPerRegion> job2 = jobTracker.newJob(source2);
-        ICompletableFuture<Map<String, Double>> future2 = job2
-                .mapper(new Query52Mapper())
-                .combiner(new Query52CombinerFactory())
-                .reducer(new Query52ReducerFactory())
-                .submit();
-
-        Map<String, Double> result = future2.get();
+        Map<String, Double> result = future.get();
         List<Map.Entry<String, Double>> sortedResult = new ArrayList<>(result.entrySet());
         Collections.sort(sortedResult, Comparator.comparingDouble(x -> -x.getValue()));
         sortedResult.forEach(r -> outputWriter.println(r.getKey() + "," + String.format("%.2f", r.getValue())));
