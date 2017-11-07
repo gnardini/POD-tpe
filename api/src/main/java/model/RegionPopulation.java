@@ -6,36 +6,39 @@ import com.hazelcast.nio.serialization.DataSerializable;
 
 import java.io.IOException;
 
-public class RegionCount implements DataSerializable {
+/**
+ * Basic information about the population of a region.
+ */
+public class RegionPopulation implements DataSerializable {
 
     private String region;
-    private int count;
+    private long population;
 
-    public RegionCount() {
+    public RegionPopulation() {
     }
 
-    public RegionCount(String region, int count) {
+    public RegionPopulation(String region, long population) {
         this.region = region;
-        this.count = count;
+        this.population = population;
     }
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeUTF(region);
-        out.writeInt(count);
+        out.writeLong(population);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         region = in.readUTF();
-        count = in.readInt();
+        population = in.readLong();
     }
 
     public String getRegion() {
         return region;
     }
 
-    public int getCount() {
-        return count;
+    public long getPopulation() {
+        return population;
     }
 }

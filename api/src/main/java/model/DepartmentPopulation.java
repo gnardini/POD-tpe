@@ -2,33 +2,32 @@ package model;
 
 import java.io.Serializable;
 
-public class PoblatedDepartment implements Serializable, Comparable<PoblatedDepartment> {
+/**
+ * Contains basic information about the population of a department.
+ */
+public class DepartmentPopulation implements Serializable, Comparable<DepartmentPopulation> {
 
     private static final long serialVersionUID = 1L;
 
     private String department;
-    private Long poblation;
+    private Long population;
 
     @Override
-    public int compareTo(PoblatedDepartment o) {
-        return o.poblation.compareTo(poblation);
+    public int compareTo(DepartmentPopulation o) {
+        return o.population.compareTo(population);
     }
 
-    public PoblatedDepartment(String department, Long poblation) {
+    public DepartmentPopulation(String department, Long population) {
         this.department = department;
-        this.poblation = poblation;
+        this.population = population;
     }
 
     public String getDepartment() {
         return department;
     }
 
-    public Long getPoblation() {
-        return poblation;
-    }
-
-    public synchronized void addPoblation(Long poblation) {
-        this.poblation += poblation;
+    public Long getPopulation() {
+        return population;
     }
 
     @Override
@@ -36,7 +35,7 @@ public class PoblatedDepartment implements Serializable, Comparable<PoblatedDepa
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        PoblatedDepartment that = (PoblatedDepartment) o;
+        DepartmentPopulation that = (DepartmentPopulation) o;
 
         return department.equals(that.department);
     }
@@ -48,7 +47,7 @@ public class PoblatedDepartment implements Serializable, Comparable<PoblatedDepa
 
     @Override
     public String toString() {
-        return getDepartment() + "," + getPoblation();
+        return getDepartment() + "," + getPopulation();
     }
 
 }

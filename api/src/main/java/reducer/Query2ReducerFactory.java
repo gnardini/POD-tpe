@@ -2,16 +2,16 @@ package reducer;
 
 import com.hazelcast.mapreduce.Reducer;
 import com.hazelcast.mapreduce.ReducerFactory;
-import model.PoblatedDepartment;
+import model.DepartmentPopulation;
 
-public class Query2ReducerFactory implements ReducerFactory<String, Long, PoblatedDepartment> {
+public class Query2ReducerFactory implements ReducerFactory<String, Long, DepartmentPopulation> {
 
     @Override
-    public Reducer<Long, PoblatedDepartment> newReducer(String department) {
+    public Reducer<Long, DepartmentPopulation> newReducer(String department) {
         return new Query2Reducer(department);
     }
 
-    private class Query2Reducer extends Reducer<Long, PoblatedDepartment> {
+    private class Query2Reducer extends Reducer<Long, DepartmentPopulation> {
 
         private final String department;
         private long total;
@@ -26,8 +26,8 @@ public class Query2ReducerFactory implements ReducerFactory<String, Long, Poblat
         }
 
         @Override
-        public PoblatedDepartment finalizeReduce() {
-            return new PoblatedDepartment(department, total);
+        public DepartmentPopulation finalizeReduce() {
+            return new DepartmentPopulation(department, total);
         }
     }
 

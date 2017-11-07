@@ -1,12 +1,11 @@
+package pod.client;
+
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.MultiMap;
 import model.CensoInfo;
 import model.Condition;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.*;

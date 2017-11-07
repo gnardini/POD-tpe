@@ -6,13 +6,16 @@ import com.hazelcast.nio.serialization.DataSerializable;
 
 import java.io.IOException;
 
+/**
+ * Counter for number of people that are either employed or unemployed.
+ */
 public class EmploymentData implements DataSerializable {
 
     public int employedPeople;
     public int unemployedPeople;
 
-    public EmploymentData(int employeddPeople, int unemployedPeople) {
-        this.employedPeople = employeddPeople;
+    public EmploymentData(int employedPeople, int unemployedPeople) {
+        this.employedPeople = employedPeople;
         this.unemployedPeople = unemployedPeople;
     }
     

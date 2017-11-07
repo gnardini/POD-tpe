@@ -2,16 +2,16 @@ package reducer;
 
 import com.hazelcast.mapreduce.Reducer;
 import com.hazelcast.mapreduce.ReducerFactory;
-import model.RegionCount;
+import model.RegionPopulation;
 
-public class Query1ReducerFactory implements ReducerFactory<String, Integer, RegionCount> {
+public class Query1ReducerFactory implements ReducerFactory<String, Integer, RegionPopulation> {
 
     @Override
-    public Reducer<Integer, RegionCount> newReducer(String region) {
+    public Reducer<Integer, RegionPopulation> newReducer(String region) {
         return new Query1Reducer(region);
     }
 
-    private class Query1Reducer extends Reducer<Integer, RegionCount> {
+    private class Query1Reducer extends Reducer<Integer, RegionPopulation> {
 
         private final String region;
         private int count;
@@ -27,8 +27,8 @@ public class Query1ReducerFactory implements ReducerFactory<String, Integer, Reg
         }
 
         @Override
-        public RegionCount finalizeReduce() {
-            return new RegionCount(region, count);
+        public RegionPopulation finalizeReduce() {
+            return new RegionPopulation(region, count);
         }
     }
 

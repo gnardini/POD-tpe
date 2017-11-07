@@ -3,7 +3,6 @@ package combiner;
 import com.hazelcast.mapreduce.Combiner;
 import com.hazelcast.mapreduce.CombinerFactory;
 import model.EmploymentData;
-import model.PoblatedDepartment;
 
 public class Query3CombinerFactory implements CombinerFactory<String, EmploymentData, EmploymentData> {
 

@@ -1,5 +1,5 @@
 CLASSPATH="hazelcast-all-3.8.6.jar"
-CLASSPATH="$CLASSPATH:target/classes"
+CLASSPATH="$CLASSPATH:api/target/classes"
 
 export CLASSPATH
 

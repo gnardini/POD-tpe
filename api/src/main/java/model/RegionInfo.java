@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Information about the number of people that live in a region and the specific home IDs that are a part of it.
+ */
 public class RegionInfo implements DataSerializable {
 
 	private Set<Integer> homeIds;
