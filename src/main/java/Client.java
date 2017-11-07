@@ -1,22 +1,17 @@
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientNetworkConfig;
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.ICompletableFuture;
-import com.hazelcast.core.IList;
-import com.hazelcast.core.IMap;
+import com.hazelcast.core.*;
 import com.hazelcast.mapreduce.Job;
 import com.hazelcast.mapreduce.JobTracker;
 import com.hazelcast.mapreduce.KeyValueSource;
 import combiner.*;
 import mapper.*;
-import model.CensoInfo;
-import model.PoblatedDepartment;
-import model.PopulationPerRegion;
-import model.RegionCount;
+import model.*;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Logger;
 import reducer.*;
+import utils.Utils;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
@@ -29,6 +24,7 @@ public class Client {
     private static final Logger logger = Logger.getRootLogger();
     private static final String GROUP_NAME = "53191-53202-54387-54377";
     private static PrintWriter outputWriter;
+    private static CsvReader csvReader;
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
 
@@ -45,6 +41,8 @@ public class Client {
     		throw new IllegalArgumentException(" addresses, query, inPath, outPath and"
     				+ " timeOutPath arguments must be present.");
     	}
+
+    	csvReader = new CsvReader(inPathString);
 
         FileAppender appender = (FileAppender) logger.getAppender("Appender1");
         appender.setFile(timeOutPathString);
@@ -68,15 +66,6 @@ public class Client {
 
         final HazelcastInstance hz = HazelcastClient.newHazelcastClient(ccfg);
 
-        CsvReader csvReader = new CsvReader();
-        final IList<CensoInfo> list = hz.getList( GROUP_NAME + "-default" );
-        if (list.isEmpty()) {
-            logger.info("Empezando lectura de CSV de entrada");
-            csvReader.readCensoFromCsv(inPathString, list);
-            logger.info("CSV de entrada subido a Hazelcast");
-        }
-
-
         int query;
         try{
         	query = Integer.parseInt(queryString);
@@ -87,51 +76,72 @@ public class Client {
         	throw new IllegalArgumentException("query argument must be a integer from 1 to 7");
         }
 
+        query1(hz);
+        outputWriter.flush();
+        query2(hz, "Santa Fe", 10);
+        outputWriter.flush();
+        query3(hz);
+        outputWriter.flush();
+        query4(hz);
+        outputWriter.flush();
+        query5(hz);
+        outputWriter.flush();
+        query6(hz, 5);
+        outputWriter.flush();
+        query7(hz, 4);
+        outputWriter.close();
+        System.exit(0);
+        if(true)return;
+
         switch(query){
         	case 1:
-        		query1(hz, list);
+        		query1(hz);
         		break;
         	case 2:
         		if(paramProv == null || paramN == null){
         			throw new IllegalArgumentException("prov and n arguments must be present for"
         					+ "query 2");
         		}
-        		query2(hz, list, paramProv, Integer.parseInt(paramN));
+        		query2(hz, paramProv, Integer.parseInt(paramN));
         		break;
         	case 3:
-        		query3(hz, list);
+        		query3(hz);
         		break;
         	case 4:
-        		query4(hz, list);
+        		query4(hz);
         		break;
         	case 5:
-        		query5(hz, list);
+        		query5(hz);
         		break;
         	case 6:
         		if(paramN == null){
         			throw new IllegalArgumentException("n argument must be present for"
         					+ "query 6");
         		}
-        		query6(hz, list, Integer.parseInt(paramN));
+        		query6(hz, Integer.parseInt(paramN));
         	case 7:
         		if(paramN == null){
         			throw new IllegalArgumentException("n argument must be present for"
         					+ "query 7");
         		}
-        		query7(hz, list, Integer.parseInt(paramN));
+        		query7(hz, Integer.parseInt(paramN));
         }
 
         outputWriter.close();
         System.exit(0);
     }
 
-    private static void query1(
-            final HazelcastInstance hz,
-            final IList<CensoInfo> censoInfos) throws ExecutionException, InterruptedException {
-        logger.info("Empezando map/reduce para la query 1");
+    private static void query1(final HazelcastInstance hz) throws ExecutionException, InterruptedException {
+        final MultiMap<String, CensoInfo> map = hz.getMultiMap( GROUP_NAME + "-query1map" );
+        map.clear();
+        logger.info("Empezando lectura de CSV de entrada");
+        Map<String, String> regions = Utils.provinceToRegion();
+        csvReader.populateMultiMap(map, c -> regions.get(c.getProvince()), c -> c);
+        logger.info("CSV de entrada subido a Hazelcast");
 
+        logger.info("Empezando map/reduce para la query 1");
         JobTracker jobTracker = hz.getJobTracker(GROUP_NAME + "-query1");
-        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
+        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromMultiMap(map);
         Job<String, CensoInfo> job = jobTracker.newJob(source);
         ICompletableFuture<Map<String, RegionCount>> future = job
                 .mapper(new Query1Mapper())
@@ -148,13 +158,17 @@ public class Client {
 
     private static void query2(
             final HazelcastInstance hz,
-            final IList<CensoInfo> censoInfos,
             final String province,
             final int top) throws ExecutionException, InterruptedException {
-        logger.info("Empezando map/reduce para la query 2");
+        final MultiMap<String, CensoInfo> map = hz.getMultiMap( GROUP_NAME + "-query2map" );
+        map.clear();
+        logger.info("Empezando lectura de CSV de entrada");
+        csvReader.populateMultiMap(map, CensoInfo::getDepartment, c -> c);
+        logger.info("CSV de entrada subido a Hazelcast");
 
+        logger.info("Empezando map/reduce para la query 2");
         JobTracker jobTracker = hz.getJobTracker(GROUP_NAME + "-query2");
-        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
+        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromMultiMap(map);
         Job<String, CensoInfo> job = jobTracker.newJob(source);
         ICompletableFuture<Map<String, PoblatedDepartment>> future = job
                 .mapper(new Query2Mapper(province))
@@ -173,12 +187,17 @@ public class Client {
     }
 
     private static void query3(
-            final HazelcastInstance hz,
-            final IList<CensoInfo> censoInfos) throws ExecutionException, InterruptedException {
-        logger.info("Empezando map/reduce para la query 3");
+            final HazelcastInstance hz) throws ExecutionException, InterruptedException {
+        final MultiMap<String, CensoInfo> map = hz.getMultiMap( GROUP_NAME + "-query3map" );
+        map.clear();
+        logger.info("Empezando lectura de CSV de entrada");
+        Map<String, String> regions = Utils.provinceToRegion();
+        csvReader.populateMultiMap(map, c -> regions.get(c.getProvince()), c -> c);
+        logger.info("CSV de entrada subido a Hazelcast");
 
+        logger.info("Empezando map/reduce para la query 3");
         JobTracker jobTracker = hz.getJobTracker(GROUP_NAME + "-query3");
-        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
+        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromMultiMap(map);
         Job<String, CensoInfo> job = jobTracker.newJob(source);
         ICompletableFuture<Map<String, Double>> future = job
                 .mapper(new Query3Mapper())
@@ -194,29 +213,23 @@ public class Client {
     }
 
     private static void query4(
-            final HazelcastInstance hz,
-            final IList<CensoInfo> censoInfos) throws ExecutionException, InterruptedException {
+            final HazelcastInstance hz) throws ExecutionException, InterruptedException {
+        final IMap<Integer, String> map = hz.getMap( GROUP_NAME + "-query4map" );
+        map.clear();
+        logger.info("Empezando lectura de CSV de entrada");
+        Map<String, String> regions = Utils.provinceToRegion();
+        csvReader.populateMap(map, CensoInfo::getHomeId, c -> regions.get(c.getProvince()));
+        logger.info("CSV de entrada subido a Hazelcast");
+
         logger.info("Empezando map/reduce para la query 4");
         JobTracker jobTracker = hz.getJobTracker(GROUP_NAME + "-query4");
 
-        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
-        Job<String, CensoInfo> jobA = jobTracker.newJob(source);
-        Map<Integer, String> midResult = jobA
-                .mapper(new Query4aMapper())
-                .combiner(new Query4aCombinerFactory())
-                .reducer(new Query4aReducerFactory())
-                .submit()
-                .get();
-
-        IMap<Integer, String> bData = hz.getMap(GROUP_NAME + "-query4map");
-        bData.putAll(midResult);
-
-        final KeyValueSource<Integer, String> sourceB = KeyValueSource.fromMap(bData);
-        Job<Integer, String> jobB = jobTracker.newJob(sourceB);
-        Map<String, Integer> result = jobB
-                .mapper(new Query4bMapper())
-                .combiner(new Query4bCombinerFactory())
-                .reducer(new Query4bReducerFactory())
+        final KeyValueSource<Integer, String> source = KeyValueSource.fromMap(map);
+        Job<Integer, String> job = jobTracker.newJob(source);
+        Map<String, Integer> result = job
+                .mapper(new Query4Mapper())
+                .combiner(new Query4CombinerFactory())
+                .reducer(new Query4ReducerFactory())
                 .submit()
                 .get();
 
@@ -227,22 +240,27 @@ public class Client {
     }
 
     private static void query5(
-            final HazelcastInstance hz,
-            final IList<CensoInfo> censoInfos) throws ExecutionException, InterruptedException {
-        logger.info("Empezando map/reduce para la query 5");
+            final HazelcastInstance hz) throws ExecutionException, InterruptedException {
+        final MultiMap<Integer, CensoInfo> map = hz.getMultiMap( GROUP_NAME + "-query5map" );
+        map.clear();
+        logger.info("Empezando lectura de CSV de entrada");
+        csvReader.populateMultiMap(map, CensoInfo::getHomeId, c -> c);
+        logger.info("CSV de entrada subido a Hazelcast");
 
+        logger.info("Empezando map/reduce para la query 5");
         JobTracker jobTracker = hz.getJobTracker(GROUP_NAME + "-query5");
-        final KeyValueSource<String, CensoInfo> source1 = KeyValueSource.fromList(censoInfos);
-        Job<String, CensoInfo> job1 = jobTracker.newJob(source1);
+        final KeyValueSource<Integer, CensoInfo> source1 = KeyValueSource.fromMultiMap(map);
+        Job<Integer, CensoInfo> job1 = jobTracker.newJob(source1);
         ICompletableFuture<Map<Integer, PopulationPerRegion>> future1 = job1
                 .mapper(new Query51Mapper())
                 .combiner(new Query51CombinerFactory())
                 .reducer(new Query51ReducerFactory())
                 .submit();
 
-        final IMap<Integer, PopulationPerRegion> map = hz.getMap(GROUP_NAME + "-query51map");
-        future1.get().forEach(map::put);
-        final KeyValueSource<Integer, PopulationPerRegion> source2 = KeyValueSource.fromMap(map);
+        final IMap<Integer, PopulationPerRegion> map2 = hz.getMap(GROUP_NAME + "-query51map");
+        map2.clear();
+        future1.get().forEach(map2::put);
+        final KeyValueSource<Integer, PopulationPerRegion> source2 = KeyValueSource.fromMap(map2);
         Job<Integer, PopulationPerRegion> job2 = jobTracker.newJob(source2);
         ICompletableFuture<Map<String, Double>> future2 = job2
                 .mapper(new Query52Mapper())
@@ -259,13 +277,17 @@ public class Client {
 
     private static void query6(
             final HazelcastInstance hz,
-            final IList<CensoInfo> censoInfos,
             final int n) throws ExecutionException, InterruptedException {
-        logger.info("Empezando map/reduce para la query 6");
+        final MultiMap<String, String> map = hz.getMultiMap( GROUP_NAME + "-query6map" );
+        map.clear();
+        logger.info("Empezando lectura de CSV de entrada");
+        csvReader.populateMultiMap(map, CensoInfo::getDepartment, CensoInfo::getProvince);
+        logger.info("CSV de entrada subido a Hazelcast");
 
+        logger.info("Empezando map/reduce para la query 6");
         JobTracker jobTracker = hz.getJobTracker(GROUP_NAME + "-query6");
-        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
-        Job<String, CensoInfo> job = jobTracker.newJob(source);
+        final KeyValueSource<String, String> source = KeyValueSource.fromMultiMap(map);
+        Job<String, String> job = jobTracker.newJob(source);
         ICompletableFuture<Map<String, Integer>> future = job
                 .mapper(new Query6Mapper())
                 .combiner(new Query6CombinerFactory())
@@ -282,20 +304,22 @@ public class Client {
 
     private static void query7(
             final HazelcastInstance hz,
-            final IList<CensoInfo> censoInfos,
             final int n) throws ExecutionException, InterruptedException {
-        logger.info("Empezando map/reduce para la query 7");
+        final MultiMap<String, String> map = hz.getMultiMap( GROUP_NAME + "-query7map" );
+        map.clear();
+        logger.info("Empezando lectura de CSV de entrada");
+        csvReader.populateMultiMap(map, CensoInfo::getDepartment, CensoInfo::getProvince);
+        logger.info("CSV de entrada subido a Hazelcast");
 
+        logger.info("Empezando map/reduce para la query 7");
         JobTracker jobTracker = hz.getJobTracker(GROUP_NAME + "-query7");
-        final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromList(censoInfos);
-        Job<String, CensoInfo> jobA = jobTracker.newJob(source);
+        final KeyValueSource<String, String> source = KeyValueSource.fromMultiMap(map);
+        Job<String, String> jobA = jobTracker.newJob(source);
         ICompletableFuture<Map<String, Set<String>>> future = jobA
                 .mapper(new Query7aMapper())
                 .combiner(new Query7aCombinerFactory())
                 .reducer(new Query7aReducerFactory())
                 .submit();
-
-
 
         Map<String, Set<String>> result = future.get();
         final IMap<String, Set<String>> partbMap = hz.getMap( GROUP_NAME + "-query7b" );

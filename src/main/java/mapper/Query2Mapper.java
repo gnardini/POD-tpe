@@ -13,9 +13,9 @@ public class Query2Mapper implements Mapper<String, CensoInfo, String, Long> {
     }
 
     @Override
-    public void map(String key, CensoInfo value, Context<String, Long> context) {
-        if (province.equals(value.getProvince())) {
-            context.emit(value.getDepartment(), 1L);
+    public void map(String department, CensoInfo info, Context<String, Long> context) {
+        if (province.equals(info.getProvince())) {
+            context.emit(department, 1L);
         }
     }
 

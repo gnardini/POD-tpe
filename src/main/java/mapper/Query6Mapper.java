@@ -2,12 +2,11 @@ package mapper;
 
 import com.hazelcast.mapreduce.Context;
 import com.hazelcast.mapreduce.Mapper;
-import model.CensoInfo;
 
-public class Query6Mapper implements Mapper<String, CensoInfo, String, String> {
+public class Query6Mapper implements Mapper<String, String, String, String> {
 
     @Override
-    public void map(String s, CensoInfo censoInfo, Context<String, String> context) {
-        context.emit(censoInfo.getDepartment(), censoInfo.getProvince());
+    public void map(String department, String province, Context<String, String> context) {
+        context.emit(department, province);
     }
 }

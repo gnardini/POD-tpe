@@ -3,7 +3,7 @@ package reducer;
 import com.hazelcast.mapreduce.Reducer;
 import com.hazelcast.mapreduce.ReducerFactory;
 
-public class Query4bReducerFactory implements ReducerFactory<String, Integer, Integer> {
+public class Query4ReducerFactory implements ReducerFactory<String, Integer, Integer> {
 
     @Override
     public Reducer<Integer, Integer> newReducer(String s) { return new Query4bReducer(); }
