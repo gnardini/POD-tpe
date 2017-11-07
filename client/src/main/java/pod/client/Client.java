@@ -109,12 +109,14 @@ public class Client {
                             + "query 6");
                 }
                 query6(hz, Integer.parseInt(paramN));
+		break;
             case 7:
                 if(paramN == null){
                     throw new IllegalArgumentException("n argument must be present for"
                             + "query 7");
                 }
                 query7(hz, Integer.parseInt(paramN));
+		break;
         }
         double diffSecs = (System.nanoTime() - start) / 1E9;
         logger.info("Query " + query + " tardo: " + diffSecs + " segundos.");
