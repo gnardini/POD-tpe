@@ -17,6 +17,7 @@ public class CsvReader {
     private static final String cvsSplitBy = ",";
     private BufferedReader br;
     private String fileName;
+    private int nextId;
 
     public CsvReader(String fileName) {
         this.fileName = fileName;
@@ -38,7 +39,8 @@ public class CsvReader {
                 return null;
             }
             String[] items = line.split(cvsSplitBy);
-            return new CensoInfo(Condition.fromInt(Integer.parseInt(items[0])), Integer.parseInt(items[1]), items[2], items[3]);
+            nextId++;
+            return new CensoInfo(nextId, Condition.fromInt(Integer.parseInt(items[0])), Integer.parseInt(items[1]), items[2], items[3]);
         } catch (IOException e) {
             e.printStackTrace();
             return null;
