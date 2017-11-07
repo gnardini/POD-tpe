@@ -13,8 +13,6 @@ import com.hazelcast.mapreduce.KeyValueSource;
 import combiner.*;
 import mapper.*;
 import model.CensoInfo;
-import model.DepartmentPopulation;
-import model.RegionPopulation;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Logger;
 import reducer.*;
@@ -169,19 +167,20 @@ public class Client {
         JobTracker jobTracker = hz.getJobTracker(GROUP_NAME + "-query2");
         final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromMultiMap(map);
         Job<String, CensoInfo> job = jobTracker.newJob(source);
-        ICompletableFuture<Map<String, DepartmentPopulation>> future = job
+        ICompletableFuture<Map<String, Long>> future = job
                 .mapper(new Query2Mapper(province))
                 .combiner(new Query2CombinerFactory())
                 .reducer(new Query2ReducerFactory())
                 .submit();
 
-        Map<String, DepartmentPopulation> result = future.get();
-        List<DepartmentPopulation> departments = new ArrayList<>(result.values());
-        Collections.sort(departments);
-        if (departments.size() > top) {
-            departments = departments.subList(0, top);
+        Map<String, Long> result = future.get();
+
+        List<Map.Entry<String, Long>> entrySet = new ArrayList<>(result.entrySet());
+        Collections.sort(entrySet, Comparator.comparingLong(e -> -e.getValue()));
+        if (entrySet.size() > top) {
+            entrySet = entrySet.subList(0, top);
         }
-        departments.forEach(outputWriter::println);
+        entrySet.forEach(r -> outputWriter.println(r.getKey() + "," + r.getValue()));
         logger.info("Termino el map/reduce para la query 2");
         timer.end("Map/reduce query 2:");
     }
