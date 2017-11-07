@@ -7,16 +7,14 @@ public class Query1CombinerFactory implements CombinerFactory<String, Integer, I
 
     @Override
     public Combiner<Integer, Integer> newCombiner(String key) {
-        return new Query1Combiner(key);
+        return new Query1Combiner();
     }
 
     private class Query1Combiner extends Combiner<Integer, Integer> {
 
-        private final String region;
         private int count;
 
-        public Query1Combiner(String region) {
-            this.region = region;
+        public Query1Combiner() {
             count = 0;
         }
 

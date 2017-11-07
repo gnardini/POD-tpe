@@ -139,16 +139,16 @@ public class Client {
         JobTracker jobTracker = hz.getJobTracker(GROUP_NAME + "-query1");
         final KeyValueSource<String, CensoInfo> source = KeyValueSource.fromMultiMap(map);
         Job<String, CensoInfo> job = jobTracker.newJob(source);
-        ICompletableFuture<Map<String, RegionPopulation>> future = job
+        ICompletableFuture<Map<String, Integer>> future = job
                 .mapper(new Query1Mapper())
                 .combiner(new Query1CombinerFactory())
                 .reducer(new Query1ReducerFactory())
                 .submit();
-        Map<String, RegionPopulation> result = future.get();
+        Map<String, Integer> result = future.get();
 
-        List<Map.Entry<String, RegionPopulation>> entrySet = new ArrayList<>(result.entrySet());
-        Collections.sort(entrySet, Comparator.comparingLong(e -> -e.getValue().getPopulation()));
-        entrySet.forEach(r -> outputWriter.println(r.getKey() + "," + r.getValue().getPopulation()));
+        List<Map.Entry<String, Integer>> entrySet = new ArrayList<>(result.entrySet());
+        Collections.sort(entrySet, Comparator.comparingLong(e -> -e.getValue()));
+        entrySet.forEach(r -> outputWriter.println(r.getKey() + "," + r.getValue()));
         logger.info("Termino el map/reduce para la query 1");
         timer.end("Map/reduce query 1:");
     }
