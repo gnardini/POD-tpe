@@ -76,23 +76,6 @@ public class Client {
         	throw new IllegalArgumentException("query argument must be a integer from 1 to 7");
         }
 
-        query1(hz);
-        outputWriter.flush();
-        query2(hz, "Santa Fe", 10);
-        outputWriter.flush();
-        query3(hz);
-        outputWriter.flush();
-        query4(hz);
-        outputWriter.flush();
-        query5(hz);
-        outputWriter.flush();
-        query6(hz, 5);
-        outputWriter.flush();
-        query7(hz, 4);
-        outputWriter.close();
-        System.exit(0);
-        if(true)return;
-
         switch(query){
         	case 1:
         		query1(hz);
