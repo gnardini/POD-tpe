@@ -80,15 +80,26 @@ public class CsvReader {
         start();
         ExecutorService executor = Executors.newFixedThreadPool(100);
         try {
+            List<Callable<Void>> tasks = new LinkedList<>();
             for (int i = 0; i < 100; i++) {
-                executor.execute(() -> {
+                tasks.add(() -> {
                     CensoInfo info;
                     while ((info = next()) != null) {
                         map.putIfAbsent(keyMapper.apply(info), valueMapper.apply(info));
                     }
+                    return null;
                 });
             }
-            executor.awaitTermination(1, TimeUnit.HOURS);
+            List<Future<Void>> futures = executor.invokeAll(tasks);
+            futures.forEach(f -> {
+                try {
+                    f.get();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
+                }
+            });
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
